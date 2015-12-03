@@ -58,7 +58,7 @@ After this with each request where authentication is required in headers pass th
 Add devise default before filter for authentication.
 
 ```ruby
-before_filter authenticate_user!
+before_filter :authenticate_user!
 ```
 
 ## Development
