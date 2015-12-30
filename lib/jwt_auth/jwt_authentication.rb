@@ -1,41 +1,42 @@
 module JwtAuthentication
-
-  def authenticate_user!(options={})
-    respond_to do |format|
-      format.html{super(options)}
-      format.json{unauthorized! unless current_user}
+  Devise.mappings.keys.collect(&:to_s).each do |u|
+    define_method "authenticate_#{u}!" do
+      respond_to do |format|
+        format.html{super}
+        format.json{unauthorized! unless eval("current_#{u}")}
+      end
+    end
+  
+    define_method "current_#{u}" do
+      respond_to do |format|
+        format.html{super}
+        format.json{eval("@current_#{u} ||= set_current_#{u}")}
+      end
+    end
+  
+    define_method "set_current_#{u}" do
+      token = request.headers['Authorization'].to_s.split(' ').last
+      return unless token
+      payload = JsonWebToken.new(token)
+      eval("@current_#{u} = #{u.capitalize}.find(payload.user_id)") if payload.valid?
     end
   end
-
-  def unauthorized!
-    head :unauthorized
-  end
-
-  def current_user
-    respond_to do |format|
-      format.html{super}
-      format.json{@current_user ||= set_current_user}
-    end
-  end
-
-  def set_current_user
-    token = request.headers['Authorization'].to_s.split(' ').last
-    return unless token
-    payload = JsonWebToken.new(token)
-    @current_user = User.find(payload.user_id) if payload.valid?
-  end
-
+  
   def show_authentication_messages
     respond_to do |format|
       format.html{super}
       format.json{
-        if @user.errors.any?
-          render :json=> @user.errors, :status=>422
-        else
-          render :json=>{:success=>true}, :status=>201
+        Devise.mappings.keys.collect(&:to_s).each do |u|
+          return render(:json=> eval("@#{u}.errors"), :status=>422) if eval("@#{u} && @#{u}.errors.any?")
         end
+        render :json=>{:success=>true}, :status=>201
       }
     end
+  end
+  
+  
+  def unauthorized!
+    head :unauthorized
   end
 
 end
