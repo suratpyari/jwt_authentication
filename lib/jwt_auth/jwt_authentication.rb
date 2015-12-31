@@ -2,14 +2,18 @@ module JwtAuthentication
   Devise.mappings.keys.collect(&:to_s).each do |u|
     define_method "authenticate_#{u}!" do
       respond_to do |format|
-        format.html{super}
+        format.html{
+          ActionController::Base.instance_method("authenticate_#{u}!".to_sym).bind(self).call
+        }
         format.json{unauthorized! unless eval("current_#{u}")}
       end
     end
   
     define_method "current_#{u}" do
       respond_to do |format|
-        format.html{super}
+        format.html{
+          ActionController::Base.instance_method("current_#{u}".to_sym).bind(self).call
+        }
         format.json{eval("@current_#{u} ||= set_current_#{u}")}
       end
     end
